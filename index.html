@@ -1,61 +1,294 @@
 <html>
+
 <head>
   <meta charset="UTF-8">
-  
+
 </head>
 
-<link rel="stylesheet" href="css/styles.css" type='text/css'/>
+
+
+
+<link rel="stylesheet" href="css/styles.css" type='text/css' />
 <script src="js/scripts.js" type="text/javascript"></script>
 <script src="js/jquery.min.js" type="text/javascript"></script>
 <title>Download de Dados Meteorológicos via API Redemet</title>
+
 <body>
   <h1>Download de Dados Meteorológicos via API Redemet</h1>
-  <span>Data Inicial:</span><input type="text">Data Inicial
-  <span id = "spanCoords">Cole as Coordenadas aqui:</span> </br><textarea id="edtCoords" class="inputCoords" onpaste="automatico()"></textarea>
+
+  <span>Data Inicial(aaaa/mm/dd):</span> <input type="text" id="dataIni" />
+  <span>Data Final (aaaa/mm/dd):</span> <input type="text" id="dataFim" />
+  <br>
+  <span id="spanResult"></span> </br><textarea id="edtResult" class="inputResult"
+    style="height:70%;width:99%"></textarea>
+
   </br>
-  <button onclick="formataCoords()">Criar</button>
+  </br>
+  <button onclick="importaDados('SIGMET')">Importar SIGMET's</button>
+  <button onclick="importaDados('metar')">Importar METAR's</button>
   </br>
   <h4>Desenvolvido por: Reinaldo Braz.</h4>
   <h5>Email: brazrab@fab.mil.br</h5>
 </body>
+
 <script src="datepicker/the-datepicker.js"></script>
 <script>
+  var arrayIdxDiaAnterior = []
+  var enter = '\n'
+  var FIR = 'SBAZ'
+
+  function trataDados(texto) {
+    return texto
+  }
+  function incDay(dt, num = 1) {
+    data = new Date(dt)
+    return new Date(data.setDate(data.getDate() + num));
+  }
+  function fillZero(dia) {
+    return dia < 10 ? "0" + parseInt(dia) : dia + ""
+  }
+
+  function formatDateConsulta(data) {
+    return data.getFullYear() + fillZero(data.getMonth() + 1) + fillZero(data.getDate())
+  }
+
+  function importaDadosDia() {
+    let fin = new Date(document.getElementById("dataFim").value)
+    let data = globalData
+    if (data <= fin) {
+      let dt = formatDateConsulta(data)
+      let inicio = dt + '00'
+      let fim = dt + '23'
+      let intervalo = `data_ini=${inicio}&data_fim=${fim}`
+
+      getMsgs(intervalo, 0, true)
+      data = incDay(data, 1)
+      globalData = data
+    } else 
+      download(globalResponse, incDay(globalData))
+  }
+
+  function importaDados(tipoMsg) {
+    function formataData(data) {
+      data = data.split('/')
+      ano = data[0]
+      mes = parseInt(data[1])
+      ano = data[2]
+
+    }
+
+    //document.getElementById("edtResult").value = ""
+
+    let ini = document.getElementById("dataIni").value
+    //document.getElementById('edtResult').value = ''
+    globalResponse = ''
+    arrayIdxDiaAnterior = []
+
+    globalData = new Date(ini)
+    globalTipoMsg = tipoMsg
+    if (tipoMsg.toUpperCase() == 'METAR')
+      //      locs = 'SBEG,SBMN,SBBV,SBPV,SBRB,SBCY,SBSL,SBBE,SBJC,SBSN,SBMQ,SBCZ,SBTF,SBMY,SBAT,SBUA,SBCC,SBSO,SBIH,SBTT,SBTK,SBJI,SBHT,SBMA,SBVH,SBTU,SBOI,SBCJ,SBCI,SBIZ,SBTS,SBTB,SBUY,SBIC,SBEK,SBGM,SBMD,SBAA,SBRD,SSKW,SBSI'
+      globalLocs = 'SBEG,SBMN,SBBV,SBPV,SBRB,SBCY,SBSL,SBBE,SBJC,SBSN,SBMQ,SBCZ,SBTF,SBMY,SBAT,SBUA,SBCC,SBSO,SBIH,SBTT,SBTK,SBJI,SBHT,SBMA,SBVH,SBTU,SBOI,SBCJ,SBCI,SBIZ,SBTS,SBTB,SBUY,SBIC,SBEK,SBGM,SBMD,SBAA,SBRD,SSKW,SBSI'
+      //globalLocs = 'SBEG,SBMN'
+    else
+      globalLocs = 'SBAZ'
+    importaDadosDia()
+    //let inicio
+
+  }
+
+  function getMsgs(intervalo, idxFIR, onLine) {
+    var url, url1, url2;
+    linkIntraer = 'http://www.redemet.aer.mil.br//api/consulta_automatica/index.php?local='
+    linkInternet = linkIntraer 
+    linkAPINova = 'https://api-redemet.decea.mil.br/mensagens/'
+    redemetAntiga = true
+    intraer = false
+    apiKey = 'U9Q2PoK6e5uhykrMXrsrGAQssG8htAnPIqXsxmei'
+    if (redemetAntiga) {
+      if (intraer)
+        url1 = linkIntraer;
+      else
+        url1 = linkInternet;
+
+      url2 = "&msg=" + globalTipoMsg.toLowerCase();
+    } else {//decea
+      url1 = `${linkAPINova}metar/`;
+
+      url2 = `?api_key=${apiKey}`;
+    }
+    localidades = globalLocs.replace(/ /g, ""); //retira os espaços
+    url = url1 + localidades + url2 + "&" + intervalo;
+
+    response = "";
+    erro = "";
+
+    if (onLine) {
+      return GetWebContent(url);
+    } else
+      trataMetarRedemet(globalStrMetaresOffLine[idxFIR], idxFIR);
+  }
+  /*
+    function getMetars(localidades, intervalo, idxFIR, onLine) {
+      var url, url1, url2;
+      linkIntraer = 'http://www.redemet.aer.mil.br//api/consulta_automatica/index.php?local='
+      redemetAntiga = true
+      intraer = true
   
-    function GetWebContent(url, idxFIR) {
+      if (redemetAntiga) {
+        if (intraer)
+          url1 = linkIntraer;
+        else
+          url1 = linkInternet;
+  
+        url2 = "&msg=sigmet";
+      } else {//decea
+        url1 = `${linkAPINova}metar/`;
+  
+        url2 = `?api_key=${apiKey}`;
+      }
+      localidades = localidades.replace(/ /g, ""); //retira os espaços
+      url = url1 + localidades + url2 + "&" + intervalo;
+  
+      response = "";
+      erro = "";
+  
+      if (onLine) {
+        return GetWebContent(url, idxFIR);
+      } else
+        trataMetarRedemet(globalStrMetaresOffLine[idxFIR], idxFIR);
+    }
+  */
+  function trataResposta(texto, dtDia) {
+    if (globalTipoMsg == 'SIGMET')
+      texto = filtraSigmet(texto, dtDia)
+
+    return texto
+    //    return texto.replace(/=/gm, "=\n");
+  }
+
+  function getIdxSigmet(sigmet) {
+    try {
+      return sigmet.split(' - ')[1].split('-')[0]
+    } catch (e) {
+      return ''
+    }
+
+  }
+
+
+  function sortByIdx(arrSigmets) {
+    function sort(arrAux) {
+      let items = arrAux.splice(0)
+
+      items.sort(function (a, b) {
+        if (parseInt(a.idx) > parseInt(b.idx)) {
+          return 1;
+        }
+        if (parseInt(a.idx) < parseInt(b.idx)) {
+          return -1;
+        }
+        // a must be equal to b
+        return 0;
+      });
+
+      return items
+    }
+    arr = []
+    arrOut = []
+    for (let i in arrSigmets) {
+      let sig = arrSigmets[i]
+      try {
+        let sigSplit = sig.split('SIGMET ')
+
+        idx = parseInt(sigSplit[0].split(' ')[0] + fillZero(sigSplit[1].split(' ')[0]))
+      } catch (e) {
+        idx = 0
+      }
+      arr.push({ idx, sig })
+    }
+    arr = sort(arr)
+    for (let i in arr) {
+      arrOut.push(arr[i].sig)
+    }
+    return arrOut
+  }
+
+  function filtraSigmet(sigmets, FIR, dia) {
+    sigmets = sigmets.replace(/\n/g, '').replace('  ', ' ')
+    arraySig = sortByIdx(sigmets.split('='))
+    let arraySaida = []
+    for (let i in arraySig) {
+      sig = arraySig[i]
+      if (sig.length < 10)
+        continue
+      let diaReceb = sig.substr(6, 2)
+      //let diaReceb = sig.replace('\n', '').substr(6, 2)
+      let idx = getIdxSigmet(sig)
+      if (sig.includes(FIR) && arrayIdxDiaAnterior.indexOf(idx) == -1 && parseInt(diaReceb) == dia.getDate()) // se nao estiver na listagem do dia anterior adiciona à saída
+        arraySaida.push(sig)
+    }
+    return arraySaida.length > 0 ? arraySaida.join('=') + '=' : ''
+  }
+
+  function updateArrIdxDiaAnterior(sigmets) {
+    arrayIdxDiaAnterior = []
+
+    arraySig = sigmets.split('=')
+    let arraySaida = []
+    for (let i in arraySig) {
+      sig = arraySig[i]
+      let idx = getIdxSigmet(sig)
+      if (idx !== '')
+        arrayIdxDiaAnterior.push(idx)
+    }
+
+  }
+
+  function GetWebContent(url) {
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function () {
-        var erro = "ErroSM=";
-        if (this.status > 0) {
-            if (this.readyState == 4 && this.status == 200) {
-                $("#imgLoad" + idxFIR).attr('src', 'pngs/green-button30.png');
-                trataMetarRedemet(this.responseText, idxFIR);
-                return this.responseText;
-            } else if (this.readyState > 2 && this.status !== 200) {
-                erro = erro + this.responseText;
-                $("#imgLoad" + idxFIR).attr('src', 'pngs/red-button30.png');
+      var erro = "ErroSM=";
+      if (this.status > 0) {
+        if (this.readyState == 4 && this.status == 200) {
+          //$("#imgLoad" + idxFIR).attr('src', 'pngs/green-button30.png');
+          let dia = incDay(globalData, -1)
+          let dadosTratados = trataResposta(this.responseText, dia)
 
-                trataMetarRedemet(erro, idxFIR);
-                return erro;
-            }
+          globalResponse += '\nData: ' + dia.getDate() + '/' + (dia.getMonth() + 1) + '/' + dia.getFullYear() + "\n" + dadosTratados;
 
+          if (dia.getMonth() !== globalData.getMonth()) { 
+            download(globalResponse, dia)
+            globalResponse = ''
+          }
+          //document.getElementById('edtResult').value += '\nData: ' + dia.getDate() + '/' + (dia.getMonth() + 1) + '/' + dia.getFullYear() + "\n" + dadosTratados;
+          //enter = '' // esnter forçado após a primeira data
+          if (globalTipoMsg.toUpperCase() == 'SIGMET')
+            updateArrIdxDiaAnterior(dadosTratados)
+
+
+          setTimeout(importaDadosDia, 10000)
+
+          //return this.responseText;
+        } else if (this.readyState > 2 && this.status !== 200) {
+
+          document.getElementById('edtResult').value += "*** ERRO NA CONSULTA EM: " + globalData + " ***";
         }
+
+      }
     };
 
 
     $(".imgLoad").attr('src', 'gifs/loading30x30.gif');
     xhttp.open('GET', url, true);
     xhttp.send();
-}
-  
-  function fillZero(dia){
-    return dia < 9? "0"+dia: dia
   }
 
-  function formataData(data){
-	  let dia = fillZero(data.getDate());
-	  let mes = fillZero(data.getMonth());
-    
-	  return data.getFullYear() + "" + mes + dia 
+  function formataData(data) {
+    let dia = fillZero(data.getDate());
+    let mes = fillZero(data.getMonth() + 1);
+
+    return data.getFullYear() + "/" + mes + "/" + dia
   }
 
   //let dataFin = `${data.getDate()}`;
@@ -63,11 +296,11 @@
   document.getElementById("dataIni").value = data;
   document.getElementById("dataFim").value = data;
   (function () {
-            const input = document.getElementById('my-input');
-            const datepicker = new TheDatepicker.Datepicker(input);
-            datepicker.render();
-   })();
-  </script>
+    const input = document.getElementById('my-input');
+    const datepicker = new TheDatepicker.Datepicker(input);
+    datepicker.render();
+  })();
+</script>
 
-<script>
+
 </html>
